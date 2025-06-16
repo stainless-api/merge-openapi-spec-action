@@ -53,7 +53,7 @@ This action will merge them all into a single file:
 
 ```yaml
 - name: Merge OpenAPI specs
-  uses: stainless-api/merge-openapi-specs-action@v1
+  uses: stainless-api/merge-openapi-specs-action@main
   with:
     input_files: 'api-specs/**/*.yaml,api-specs/**/*.json'
     output_path: ./merged/api.yaml
@@ -78,13 +78,13 @@ jobs:
 
       - name: Merge all OpenAPI specs
         id: merge
-        uses: stainless-api/merge-openapi-specs-action@v1
+        uses: stainless-api/merge-openapi-specs-action@main
         with:
           input_files: 'api-specs/**/*.yaml,api-specs/**/*.json'
           output_path: ./build/complete-api.yaml
 
       - name: Build SDKs
-        uses: stainless-api/build-sdk-action@v1
+        uses: stainless-api/build-sdk-action@main
         with:
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
           org: my-org
@@ -114,7 +114,7 @@ jobs:
       # Step 1: Merge all microservice API specs
       - name: Merge microservice APIs
         id: merge
-        uses: stainless-api/merge-openapi-specs-action@v1
+        uses: stainless-api/merge-openapi-specs-action@main
         with:
           input_files: 'services/*/openapi.yaml,services/*/openapi.json'
           output_path: ./build/platform-api.yaml
@@ -126,7 +126,7 @@ jobs:
 
       # Step 3: Build SDKs with Stainless
       - name: Build SDKs
-        uses: stainless-api/build-sdk-action@v1
+        uses: stainless-api/build-sdk-action@main
         with:
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
           org: my-org
