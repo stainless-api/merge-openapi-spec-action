@@ -64,16 +64,25 @@ for pattern in "${PATTERNS[@]}"; do
     # Trim whitespace
     pattern=$(echo "$pattern" | xargs)
     
-    # Expand glob pattern
-    while IFS= read -r -d '' file; do
-        if [ -f "$file" ]; then
-            spec_files+=("$file")
-        fi
-    done < <(find . -path "$pattern" -type f -print0 2>/dev/null || printf '%s\0' "$pattern")
+    # Check if it's a direct file path
+    if [ -f "$pattern" ]; then
+        spec_files+=("$pattern")
+    else
+        # Try glob expansion
+        shopt -s nullglob globstar
+        for file in $pattern; do
+            if [ -f "$file" ]; then
+                spec_files+=("$file")
+            fi
+        done
+        shopt -u nullglob globstar
+    fi
 done
 
-# Remove duplicates
-mapfile -t spec_files < <(printf "%s\n" "${spec_files[@]}" | sort -u)
+# Remove duplicates and empty entries
+if [ ${#spec_files[@]} -gt 0 ]; then
+    mapfile -t spec_files < <(printf "%s\n" "${spec_files[@]}" | grep -v '^$' | sort -u)
+fi
 
 if [ ${#spec_files[@]} -eq 0 ]; then
     echo -e "${RED}No OpenAPI spec files found matching patterns: $INPUT_FILES${NC}"
