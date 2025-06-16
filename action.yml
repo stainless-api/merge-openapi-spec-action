@@ -1,0 +1,53 @@
+name: 'Merge OpenAPI Specs'
+description: 'Merge multiple OpenAPI specification files into a single YAML file'
+author: 'Stainless Team <support@stainless.com>'
+
+inputs:
+  input-dir:
+    description: 'Directory containing OpenAPI spec files to merge'
+    required: false
+    default: './input'
+  output-dir:
+    description: 'Directory where the merged file will be saved'
+    required: false
+    default: './output'
+  output-filename:
+    description: 'Name of the merged output file'
+    required: false
+    default: 'merged-openapi.yaml'
+
+outputs:
+  merged-file:
+    description: 'Path to the merged OpenAPI specification file'
+    value: ${{ steps.merge.outputs.merged-file }}
+  path-count:
+    description: 'Total number of paths in the merged specification'
+    value: ${{ steps.merge.outputs.path-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        npm install -g @redocly/cli
+        sudo apt-get update
+        sudo apt-get install -y jq
+        # Install yq
+        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        sudo chmod +x /usr/local/bin/yq
+
+    - name: Merge OpenAPI specs
+      id: merge
+      shell: bash
+      run: |
+        bash ${{ github.action_path }}/merge-specs.sh "${{ inputs.input-dir }}" "${{ inputs.output-dir }}" "${{ inputs.output-filename }}"
+
+branding:
+  icon: 'layers'
+  color: 'blue'

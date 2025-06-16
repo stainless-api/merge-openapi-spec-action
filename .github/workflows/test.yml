@@ -1,0 +1,121 @@
+name: Test Action
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create test OpenAPI specs
+        run: |
+          mkdir -p test-specs
+          
+          # Create first test spec
+          cat > test-specs/users-api.json <<EOF
+          {
+            "openapi": "3.0.0",
+            "info": {
+              "title": "Users API",
+              "version": "1.0.0"
+            },
+            "paths": {
+              "/users": {
+                "get": {
+                  "summary": "List users",
+                  "responses": {
+                    "200": {
+                      "description": "Success"
+                    }
+                  }
+                }
+              },
+              "/users/{id}": {
+                "get": {
+                  "summary": "Get user by ID",
+                  "parameters": [
+                    {
+                      "name": "id",
+                      "in": "path",
+                      "required": true,
+                      "schema": {
+                        "type": "string"
+                      }
+                    }
+                  ],
+                  "responses": {
+                    "200": {
+                      "description": "Success"
+                    }
+                  }
+                }
+              }
+            }
+          }
+          EOF
+          
+          # Create second test spec
+          cat > test-specs/products-api.yaml <<EOF
+          openapi: 3.0.0
+          info:
+            title: Products API
+            version: 1.0.0
+          paths:
+            /products:
+              get:
+                summary: List products
+                responses:
+                  '200':
+                    description: Success
+            /products/{id}:
+              get:
+                summary: Get product by ID
+                parameters:
+                  - name: id
+                    in: path
+                    required: true
+                    schema:
+                      type: string
+                responses:
+                  '200':
+                    description: Success
+          EOF
+      
+      - name: Test merge action
+        id: merge
+        uses: ./
+        with:
+          input-dir: ./test-specs
+          output-dir: ./test-output
+          output-filename: merged-test-api.yaml
+      
+      - name: Verify merge
+        run: |
+          echo "Merged file: ${{ steps.merge.outputs.merged-file }}"
+          echo "Total paths: ${{ steps.merge.outputs.path-count }}"
+          
+          # Check if file exists
+          if [ ! -f "${{ steps.merge.outputs.merged-file }}" ]; then
+            echo "Error: Merged file not found!"
+            exit 1
+          fi
+          
+          # Check path count
+          if [ "${{ steps.merge.outputs.path-count }}" != "4" ]; then
+            echo "Error: Expected 4 paths, got ${{ steps.merge.outputs.path-count }}"
+            exit 1
+          fi
+          
+          echo "Test passed!"
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-merged-spec
+          path: ./test-output/
