@@ -42,7 +42,7 @@ convert_to_yaml() {
     
     if [[ $input_file == *.json ]]; then
         echo -e "${YELLOW}Converting $input_file to YAML...${NC}"
-        redocly bundle "$input_file" -o "$output_file" --format=yaml --ext yaml || {
+        redocly bundle "$input_file" -o "$output_file" || {
             echo -e "${RED}Failed to convert $input_file${NC}"
             return 1
         }
@@ -76,6 +76,13 @@ for pattern in "${PATTERNS[@]}"; do
             fi
         done
         shopt -u nullglob globstar
+        
+        # If no files found with glob, try find for more complex patterns
+        while IFS= read -r -d '' file; do
+            if [ -f "$file" ]; then
+                spec_files+=("$file")
+            fi
+        done < <(find . -path "$pattern" -type f -print0 2>/dev/null)
     fi
 done
 
