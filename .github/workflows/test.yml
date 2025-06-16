@@ -24,10 +24,17 @@ jobs:
               "title": "Users API",
               "version": "1.0.0"
             },
+            "tags": [
+              {
+                "name": "users",
+                "description": "User management"
+              }
+            ],
             "paths": {
               "/users": {
                 "get": {
                   "summary": "List users",
+                  "tags": ["users"],
                   "responses": {
                     "200": {
                       "description": "Success"
@@ -38,6 +45,7 @@ jobs:
               "/users/{id}": {
                 "get": {
                   "summary": "Get user by ID",
+                  "tags": ["users"],
                   "parameters": [
                     {
                       "name": "id",
@@ -65,16 +73,23 @@ jobs:
           info:
             title: Products API
             version: 1.0.0
+          tags:
+            - name: products
+              description: Product management
           paths:
             /products:
               get:
                 summary: List products
+                tags:
+                  - products
                 responses:
                   '200':
                     description: Success
             /products/{id}:
               get:
                 summary: Get product by ID
+                tags:
+                  - products
                 parameters:
                   - name: id
                     in: path
@@ -139,16 +154,23 @@ jobs:
           info:
             title: Auth Service
             version: 1.0.0
+          tags:
+            - name: authentication
+              description: Authentication operations
           paths:
             /auth/login:
               post:
                 summary: User login
+                tags:
+                  - authentication
                 responses:
                   '200':
                     description: Success
             /auth/logout:
               post:
                 summary: User logout
+                tags:
+                  - authentication
                 responses:
                   '200':
                     description: Success
@@ -162,10 +184,17 @@ jobs:
               "title": "Billing Service",
               "version": "1.0.0"
             },
+            "tags": [
+              {
+                "name": "billing",
+                "description": "Billing operations"
+              }
+            ],
             "paths": {
               "/billing/invoice": {
                 "get": {
                   "summary": "Get invoices",
+                  "tags": ["billing"],
                   "responses": {
                     "200": {
                       "description": "Success"
@@ -183,10 +212,15 @@ jobs:
           info:
             title: Notifications Service
             version: 1.0.0
+          tags:
+            - name: notifications
+              description: Notification operations
           paths:
             /notifications/send:
               post:
                 summary: Send notification
+                tags:
+                  - notifications
                 responses:
                   '200':
                     description: Success
@@ -258,10 +292,12 @@ jobs:
           {
             "openapi": "3.0.0",
             "info": {"title": "API v1", "version": "1.0.0"},
+            "tags": [{"name": "v1", "description": "Version 1 API"}],
             "paths": {
               "/v1/test": {
                 "get": {
                   "summary": "Test v1",
+                  "tags": ["v1"],
                   "responses": {"200": {"description": "Success"}}
                 }
               }
@@ -274,10 +310,15 @@ jobs:
           info:
             title: API v2
             version: 2.0.0
+          tags:
+            - name: v2
+              description: Version 2 API
           paths:
             /v2/test:
               get:
                 summary: Test v2
+                tags:
+                  - v2
                 responses:
                   '200':
                     description: Success
@@ -311,10 +352,15 @@ jobs:
           info:
             title: Service 1
             version: 1.0.0
+          tags:
+            - name: service1
+              description: Service 1 operations
           paths:
             /users:
               get:
                 summary: Get users from service 1
+                tags:
+                  - service1
                 responses:
                   '200':
                     description: Success
@@ -325,35 +371,43 @@ jobs:
           info:
             title: Service 2
             version: 1.0.0
+          tags:
+            - name: service2
+              description: Service 2 operations
           paths:
             /users:
               get:
                 summary: Get users from service 2
+                tags:
+                  - service2
                 responses:
                   '200':
                     description: Success
             /products:
               get:
                 summary: Get products
+                tags:
+                  - service2
                 responses:
                   '200':
                     description: Success
           EOF
       
-      - name: Test with path conflicts
+      - name: Test with path conflicts (should fail)
         id: merge-conflict
         uses: ./
         with:
           input_files: "conflict-test/*.yaml"
           output_path: ./conflict-merged.yaml
+        continue-on-error: true
       
-      - name: Check for warning about path conflicts
+      - name: Verify merge failed due to path conflicts
         run: |
-          # Should have only 2 paths instead of 3 due to conflict
-          if [ "${{ steps.merge-conflict.outputs.path_count }}" != "2" ]; then
-            echo "Error: Expected 2 paths after conflict, got ${{ steps.merge-conflict.outputs.path_count }}"
+          if [ "${{ steps.merge-conflict.outcome }}" != "failure" ]; then
+            echo "Error: Action should have failed due to path conflicts"
             exit 1
           fi
+          echo "Test passed: merge correctly failed due to path conflicts"
 
   test-error-handling:
     runs-on: ubuntu-latest
