@@ -3,9 +3,8 @@
 set -euo pipefail
 
 # Get input parameters
-INPUT_DIR="${1:-./input}"
-OUTPUT_DIR="${2:-./output}"
-OUTPUT_FILENAME="${3:-merged-openapi.yaml}"
+INPUT_FILES="${1}"
+OUTPUT_PATH="${2:-./merged-openapi.yaml}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -15,10 +14,12 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Create necessary directories
-echo -e "${BLUE}Creating directories...${NC}"
+OUTPUT_DIR=$(dirname "$OUTPUT_PATH")
+echo -e "${BLUE}Creating output directory: $OUTPUT_DIR${NC}"
 mkdir -p "$OUTPUT_DIR"
+
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf $TEMP_DIR' EXIT
 
 # Function to count paths in a spec file
 count_paths() {
@@ -53,19 +54,36 @@ convert_to_yaml() {
     return 0
 }
 
-# Find all OpenAPI spec files
-echo -e "${BLUE}Finding OpenAPI spec files in $INPUT_DIR...${NC}"
+# Expand glob patterns and collect files
+echo -e "${BLUE}Finding OpenAPI spec files...${NC}"
 spec_files=()
-while IFS= read -r -d '' file; do
-    spec_files+=("$file")
-done < <(find "$INPUT_DIR" -type f \( -name "*.json" -o -name "*.yaml" -o -name "*.yml" \) -print0)
+
+# Handle comma-separated list or space-separated globs
+IFS=',' read -ra PATTERNS <<< "$INPUT_FILES"
+for pattern in "${PATTERNS[@]}"; do
+    # Trim whitespace
+    pattern=$(echo "$pattern" | xargs)
+    
+    # Expand glob pattern
+    while IFS= read -r -d '' file; do
+        if [ -f "$file" ]; then
+            spec_files+=("$file")
+        fi
+    done < <(find . -path "$pattern" -type f -print0 2>/dev/null || printf '%s\0' "$pattern")
+done
+
+# Remove duplicates
+mapfile -t spec_files < <(printf "%s\n" "${spec_files[@]}" | sort -u)
 
 if [ ${#spec_files[@]} -eq 0 ]; then
-    echo -e "${RED}No OpenAPI spec files found in $INPUT_DIR${NC}"
+    echo -e "${RED}No OpenAPI spec files found matching patterns: $INPUT_FILES${NC}"
     exit 1
 fi
 
-echo -e "${GREEN}Found ${#spec_files[@]} spec files${NC}"
+echo -e "${GREEN}Found ${#spec_files[@]} spec files:${NC}"
+for file in "${spec_files[@]}"; do
+    echo -e "  ${BLUE}$file${NC}"
+done
 
 # Convert all files to YAML and count paths
 total_paths_before=0
@@ -73,7 +91,13 @@ yaml_files=()
 
 for spec_file in "${spec_files[@]}"; do
     basename_no_ext=$(basename "${spec_file%.*}")
+    # Add index to handle duplicate basenames
+    index=0
     yaml_file="$TEMP_DIR/${basename_no_ext}.yaml"
+    while [ -f "$yaml_file" ]; do
+        ((index++))
+        yaml_file="$TEMP_DIR/${basename_no_ext}_${index}.yaml"
+    done
     
     if convert_to_yaml "$spec_file" "$yaml_file"; then
         path_count=$(count_paths "$yaml_file")
@@ -86,22 +110,21 @@ done
 echo -e "${GREEN}Total paths before merge: $total_paths_before${NC}"
 
 # Merge files using redocly
-output_file="$OUTPUT_DIR/$OUTPUT_FILENAME"
 echo -e "${BLUE}Merging ${#yaml_files[@]} files...${NC}"
 
 if [ ${#yaml_files[@]} -eq 1 ]; then
     # Only one file, just copy it
-    cp "${yaml_files[0]}" "$output_file"
+    cp "${yaml_files[0]}" "$OUTPUT_PATH"
 else
     # Merge multiple files
-    redocly join "${yaml_files[@]}" -o "$output_file" || {
+    redocly join "${yaml_files[@]}" -o "$OUTPUT_PATH" || {
         echo -e "${RED}Failed to merge files${NC}"
         exit 1
     }
 fi
 
 # Verify the merge
-total_paths_after=$(count_paths "$output_file")
+total_paths_after=$(count_paths "$OUTPUT_PATH")
 echo -e "${GREEN}Total paths after merge: $total_paths_after${NC}"
 
 if [ "$total_paths_after" -ne "$total_paths_before" ]; then
@@ -111,9 +134,9 @@ fi
 
 # Set outputs for GitHub Actions
 if [ -n "${GITHUB_OUTPUT:-}" ]; then
-    echo "merged-file=$output_file" >> "$GITHUB_OUTPUT"
-    echo "path-count=$total_paths_after" >> "$GITHUB_OUTPUT"
+    echo "merged_file=$OUTPUT_PATH" >> "$GITHUB_OUTPUT"
+    echo "path_count=$total_paths_after" >> "$GITHUB_OUTPUT"
 fi
 
 echo -e "${GREEN}Merge completed successfully!${NC}"
-echo -e "${GREEN}Output file: $output_file${NC}"
+echo -e "${GREEN}Output file: $OUTPUT_PATH${NC}"

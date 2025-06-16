@@ -3,26 +3,21 @@ description: 'Merge multiple OpenAPI specification files into a single YAML file
 author: 'Stainless Team <support@stainless.com>'
 
 inputs:
-  input-dir:
-    description: 'Directory containing OpenAPI spec files to merge'
+  input_files:
+    description: 'Glob patterns or file paths of OpenAPI spec files to merge (e.g., "services/**/*.yaml" or "api1.json,api2.yaml")'
+    required: true
+  output_path:
+    description: 'Path where the merged file will be saved'
     required: false
-    default: './input'
-  output-dir:
-    description: 'Directory where the merged file will be saved'
-    required: false
-    default: './output'
-  output-filename:
-    description: 'Name of the merged output file'
-    required: false
-    default: 'merged-openapi.yaml'
+    default: './merged-openapi.yaml'
 
 outputs:
-  merged-file:
+  merged_file:
     description: 'Path to the merged OpenAPI specification file'
-    value: ${{ steps.merge.outputs.merged-file }}
-  path-count:
+    value: ${{ steps.merge.outputs.merged_file }}
+  path_count:
     description: 'Total number of paths in the merged specification'
-    value: ${{ steps.merge.outputs.path-count }}
+    value: ${{ steps.merge.outputs.path_count }}
 
 runs:
   using: 'composite'
@@ -46,7 +41,7 @@ runs:
       id: merge
       shell: bash
       run: |
-        bash ${{ github.action_path }}/merge-specs.sh "${{ inputs.input-dir }}" "${{ inputs.output-dir }}" "${{ inputs.output-filename }}"
+        bash ${{ github.action_path }}/merge-specs.sh "${{ inputs.input_files }}" "${{ inputs.output_path }}"
 
 branding:
   icon: 'layers'

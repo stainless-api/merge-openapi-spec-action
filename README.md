@@ -11,18 +11,17 @@ A GitHub Action to merge multiple OpenAPI specification files (JSON/YAML) into a
 
 ## Inputs
 
-| Input             | Description                                      | Required | Default               |
-| ----------------- | ------------------------------------------------ | -------- | --------------------- |
-| `input-dir`       | Directory containing OpenAPI spec files to merge | No       | `./input`             |
-| `output-dir`      | Directory where the merged file will be saved    | No       | `./output`            |
-| `output-filename` | Name of the merged output file                   | No       | `merged-openapi.yaml` |
+| Input         | Description                                                                           | Required | Default                 |
+| ------------- | ------------------------------------------------------------------------------------- | -------- | ----------------------- |
+| `input_files` | Glob patterns or file paths of OpenAPI spec files to merge (comma-separated)         | Yes      | -                       |
+| `output_path` | Path where the merged file will be saved                                              | No       | `./merged-openapi.yaml` |
 
 ## Outputs
 
 | Output        | Description                                       |
 | ------------- | ------------------------------------------------- |
-| `merged-file` | Path to the merged OpenAPI specification file     |
-| `path-count`  | Total number of paths in the merged specification |
+| `merged_file` | Path to the merged OpenAPI specification file     |
+| `path_count`  | Total number of paths in the merged specification |
 
 ## How It Works
 
@@ -51,41 +50,8 @@ This action will merge them all into a single file:
 - name: Merge OpenAPI specs
   uses: stainless-api/merge-openapi-specs-action@v1
   with:
-    input-dir: ./api-specs
-    output-dir: ./merged
-    output-filename: api.yaml
-```
-
-### Integration with Stainless Upload Action
-
-```yaml
-name: Upload Merged API to Stainless
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - "api-specs/**"
-
-jobs:
-  merge-and-upload:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Merge all OpenAPI specs
-        id: merge
-        uses: stainless-api/merge-openapi-specs-action@v1
-        with:
-          input-dir: ./api-specs
-          output-filename: merged-api.yaml
-
-      - name: Upload to Stainless
-        uses: stainless-api/upload-openapi-spec-action@v1
-        with:
-          stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
-          input_path: ${{ steps.merge.outputs.merged-file }}
-          config_path: ./stainless.yml
+    input_files: "api-specs/**/*.yaml,api-specs/**/*.json"
+    output_path: ./merged/api.yaml
 ```
 
 ### Integration with Stainless SDK Build Action
@@ -109,23 +75,24 @@ jobs:
         id: merge
         uses: stainless-api/merge-openapi-specs-action@v1
         with:
-          input-dir: ./api-specs
-          output-dir: ./build
-          output-filename: complete-api.yaml
+          input_files: "api-specs/**/*.yaml,api-specs/**/*.json"
+          output_path: ./build/complete-api.yaml
 
       - name: Build SDKs
         uses: stainless-api/build-sdk-action@v1
         with:
-          spec_path: ${{ steps.merge.outputs.merged-file }}
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
-          config_path: ./stainless.yml
-          languages: typescript,python,go
+          org: my-org
+          project: my-project
+          oas_path: ${{ steps.merge.outputs.merged_file }}
+          config_path: ./stainless.yaml
 ```
 
-### Complete CI/CD Pipeline Example
+
+### Complete SDK Pipeline Example
 
 ```yaml
-name: API Documentation Pipeline
+name: Build and Publish SDKs
 
 on:
   push:
@@ -135,45 +102,44 @@ on:
       - "services/*/openapi.json"
 
 jobs:
-  process-api-specs:
+  build-sdks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Step 1: Merge all service API specs
+      # Step 1: Merge all microservice API specs
       - name: Merge microservice APIs
         id: merge
         uses: stainless-api/merge-openapi-specs-action@v1
         with:
-          input-dir: ./services
-          output-dir: ./dist
-          output-filename: platform-api.yaml
+          input_files: "services/*/openapi.yaml,services/*/openapi.json"
+          output_path: ./build/platform-api.yaml
 
       # Step 2: Validate the merged spec
       - name: Validate OpenAPI spec
         run: |
-          npx @redocly/cli lint ${{ steps.merge.outputs.merged-file }}
+          npx @redocly/cli lint ${{ steps.merge.outputs.merged_file }}
 
-      # Step 3: Upload to Stainless
-      - name: Upload to Stainless
-        uses: stainless-api/upload-openapi-spec-action@v1
+      # Step 3: Build SDKs with Stainless
+      - name: Build SDKs
+        uses: stainless-api/build-sdk-action@v1
         with:
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
-          input_path: ${{ steps.merge.outputs.merged-file }}
-          config_path: ./stainless.yml
+          org: my-org
+          project: my-project
+          oas_path: ${{ steps.merge.outputs.merged_file }}
+          config_path: ./stainless.yaml
 
-      # Step 4: Generate documentation
-      - name: Generate API docs
-        run: |
-          npx @redocly/cli build-docs ${{ steps.merge.outputs.merged-file }} \
-            -o ./docs/api.html
-
-      # Step 5: Deploy docs (example with GitHub Pages)
-      - name: Deploy documentation
-        uses: peaceiris/actions-gh-pages@v3
+      # Step 4: Upload artifacts (optional)
+      - name: Upload SDK artifacts
+        uses: actions/upload-artifact@v4
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+          name: generated-sdks
+          path: |
+            ./sdk-typescript/
+            ./sdk-python/
+            ./sdk-go/
+            ./sdk-java/
 ```
 
 ## Requirements
