@@ -1,0 +1,106 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Users API",
+    "version": "1.0.0"
+  },
+  "tags": [
+    {
+      "name": "users-api_other",
+      "x-displayName": "other"
+    },
+    {
+      "name": "products-api_other",
+      "x-displayName": "other"
+    }
+  ],
+  "paths": {
+    "/users": {
+      "get": {
+        "summary": "List users",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "users-api_other"
+        ]
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "Get user by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "users-api_other"
+        ]
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "List products",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "products-api_other"
+        ]
+      }
+    },
+    "/products/{id}": {
+      "get": {
+        "summary": "Get product by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        },
+        "tags": [
+          "products-api_other"
+        ]
+      }
+    }
+  },
+  "components": {},
+  "x-tagGroups": [
+    {
+      "name": "Users API",
+      "tags": [
+        "users-api_other"
+      ]
+    },
+    {
+      "name": "Products API",
+      "tags": [
+        "products-api_other"
+      ]
+    }
+  ]
+}

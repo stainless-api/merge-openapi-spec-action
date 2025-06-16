@@ -14,34 +14,12 @@ inputs:
 outputs:
   merged_file:
     description: 'Path to the merged OpenAPI specification file'
-    value: ${{ steps.merge.outputs.merged_file }}
   path_count:
     description: 'Total number of paths in the merged specification'
-    value: ${{ steps.merge.outputs.path_count }}
 
 runs:
-  using: 'composite'
-  steps:
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-
-    - name: Install dependencies
-      shell: bash
-      run: |
-        npm install -g @redocly/cli
-        sudo apt-get update
-        sudo apt-get install -y jq
-        # Install yq
-        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-        sudo chmod +x /usr/local/bin/yq
-
-    - name: Merge OpenAPI specs
-      id: merge
-      shell: bash
-      run: |
-        bash ${{ github.action_path }}/merge-specs.sh "${{ inputs.input_files }}" "${{ inputs.output_path }}"
+  using: 'node20'
+  main: 'dist/index.js'
 
 branding:
   icon: 'layers'

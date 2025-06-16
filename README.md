@@ -5,16 +5,18 @@ A GitHub Action to merge multiple OpenAPI specification files (JSON/YAML) into a
 ## Features
 
 - Supports both JSON and YAML OpenAPI specification files
-- Automatically converts JSON files to YAML before merging
+- Handles glob patterns and direct file paths
+- Merges using [Redocly CLI](https://redocly.com/docs/cli/) for proper OpenAPI spec handling
+- Preserves tags and tag groups from source specs
 - Verifies merge integrity by comparing path counts
 - Outputs the merged file path and total path count
 
 ## Inputs
 
-| Input         | Description                                                                           | Required | Default                 |
-| ------------- | ------------------------------------------------------------------------------------- | -------- | ----------------------- |
-| `input_files` | Glob patterns or file paths of OpenAPI spec files to merge (comma-separated)         | Yes      | -                       |
-| `output_path` | Path where the merged file will be saved                                              | No       | `./merged-openapi.yaml` |
+| Input         | Description                                                                  | Required | Default                 |
+| ------------- | ---------------------------------------------------------------------------- | -------- | ----------------------- |
+| `input_files` | Glob patterns or file paths of OpenAPI spec files to merge (comma-separated) | Yes      | -                       |
+| `output_path` | Path where the merged file will be saved                                     | No       | `./merged-openapi.yaml` |
 
 ## Outputs
 
@@ -25,11 +27,14 @@ A GitHub Action to merge multiple OpenAPI specification files (JSON/YAML) into a
 
 ## How It Works
 
-1. **Discovery**: The action recursively searches the input directory for all `.json`, `.yaml`, and `.yml` files
-2. **Conversion**: JSON files are automatically converted to YAML format
-3. **Merging**: All specs are merged using Redocly's `join` command
-4. **Verification**: Path counts are compared before and after merging to detect any overwrites
-5. **Output**: The merged file is saved to the specified location and the path is available as an output
+1. **Discovery**: The action finds files matching your input patterns (supports glob patterns and direct file paths)
+2. **Merging**: Uses Redocly CLI's `join` command to properly merge OpenAPI specs while handling:
+   - Component references
+   - Tags and tag groups
+   - Conflicting paths (last one wins)
+3. **Conversion**: The final output is saved as a YAML file
+4. **Verification**: Path counts are compared before and after merging
+5. **Output**: The merged file path and total path count are available as action outputs
 
 ## Usage
 
@@ -50,7 +55,7 @@ This action will merge them all into a single file:
 - name: Merge OpenAPI specs
   uses: stainless-api/merge-openapi-specs-action@v1
   with:
-    input_files: "api-specs/**/*.yaml,api-specs/**/*.json"
+    input_files: 'api-specs/**/*.yaml,api-specs/**/*.json'
     output_path: ./merged/api.yaml
 ```
 
@@ -63,7 +68,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "api-specs/**"
+      - 'api-specs/**'
 
 jobs:
   merge-and-build-sdk:
@@ -75,7 +80,7 @@ jobs:
         id: merge
         uses: stainless-api/merge-openapi-specs-action@v1
         with:
-          input_files: "api-specs/**/*.yaml,api-specs/**/*.json"
+          input_files: 'api-specs/**/*.yaml,api-specs/**/*.json'
           output_path: ./build/complete-api.yaml
 
       - name: Build SDKs
@@ -88,7 +93,6 @@ jobs:
           config_path: ./stainless.yaml
 ```
 
-
 ### Complete SDK Pipeline Example
 
 ```yaml
@@ -98,8 +102,8 @@ on:
   push:
     branches: [main]
     paths:
-      - "services/*/openapi.yaml"
-      - "services/*/openapi.json"
+      - 'services/*/openapi.yaml'
+      - 'services/*/openapi.json'
 
 jobs:
   build-sdks:
@@ -112,7 +116,7 @@ jobs:
         id: merge
         uses: stainless-api/merge-openapi-specs-action@v1
         with:
-          input_files: "services/*/openapi.yaml,services/*/openapi.json"
+          input_files: 'services/*/openapi.yaml,services/*/openapi.json'
           output_path: ./build/platform-api.yaml
 
       # Step 2: Validate the merged spec
@@ -141,15 +145,6 @@ jobs:
             ./sdk-go/
             ./sdk-java/
 ```
-
-## Requirements
-
-This action automatically installs the following dependencies:
-
-- Node.js 20
-- @redocly/cli
-- jq
-- yq
 
 ## License
 
