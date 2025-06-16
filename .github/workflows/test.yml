@@ -24,12 +24,31 @@ jobs:
               "title": "Users API",
               "version": "1.0.0"
             },
+            "servers": [
+              {
+                "url": "https://api.example.com/v1"
+              }
+            ],
+            "security": [
+              {
+                "apiKey": []
+              }
+            ],
             "tags": [
               {
                 "name": "users",
                 "description": "User management"
               }
             ],
+            "components": {
+              "securitySchemes": {
+                "apiKey": {
+                  "type": "apiKey",
+                  "in": "header",
+                  "name": "X-API-Key"
+                }
+              }
+            },
             "paths": {
               "/users": {
                 "get": {
@@ -73,9 +92,19 @@ jobs:
           info:
             title: Products API
             version: 1.0.0
+          servers:
+            - url: https://api.example.com/v1
+          security:
+            - apiKey: []
           tags:
             - name: products
               description: Product management
+          components:
+            securitySchemes:
+              apiKey:
+                type: apiKey
+                in: header
+                name: X-API-Key
           paths:
             /products:
               get:
