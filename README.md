@@ -53,7 +53,7 @@ This action will merge them all into a single file:
 
 ```yaml
 - name: Merge OpenAPI specs
-  uses: stainless-api/merge-openapi-specs-action@main
+  uses: stainless-api/merge-openapi-spec-action@main
   with:
     input_files: 'api-specs/**/*.yaml,api-specs/**/*.json'
     output_path: ./merged-api.yaml
@@ -78,7 +78,7 @@ jobs:
 
       - name: Merge all OpenAPI specs
         id: merge
-        uses: stainless-api/merge-openapi-specs-action@main
+        uses: stainless-api/merge-openapi-spec-action@main
         with:
           input_files: 'api-specs/**/*.yaml,api-specs/**/*.json'
           output_path: ./complete-api.yaml
@@ -114,7 +114,7 @@ jobs:
       # Step 1: Merge all microservice API specs
       - name: Merge microservice APIs
         id: merge-specs
-        uses: stainless-api/merge-openapi-specs-action@main
+        uses: stainless-api/merge-openapi-spec-action@main
         with:
           input_files: 'services/*/openapi.yaml,services/*/openapi.json'
           output_path: ./platform-api.yaml
