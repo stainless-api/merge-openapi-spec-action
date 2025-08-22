@@ -87,7 +87,6 @@ jobs:
         uses: stainless-api/build-sdk-action@main
         with:
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
-          org: my-org
           project: my-project
           oas_path: ${{ steps.merge.outputs.merged_file }}
           config_path: ./stainless.yaml
@@ -129,7 +128,6 @@ jobs:
         uses: stainless-api/build-sdk-action/merge@main
         with:
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
-          org: ${{ env.STAINLESS_ORG }}
           project: ${{ env.STAINLESS_PROJECT }}
           oas_path: ${{ env.OAS_PATH }}
           commit_message: ${{ env.COMMIT_MESSAGE }}
