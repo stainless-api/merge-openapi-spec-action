@@ -10,6 +10,16 @@ inputs:
     description: 'Path where the merged file will be saved'
     required: false
     default: './merged-openapi.yaml'
+  server_url_strategy:
+    description: |
+      Optional YAML configuration for handling server URLs during merge.
+      Format:
+        global: <url>  # URL to use as global server in merged spec
+        preserve:      # List of URLs to preserve at operation level
+          - <url1>
+          - <url2>
+      URLs not listed are ignored (removed, will use global server)
+    required: false
 
 outputs:
   merged_file:
