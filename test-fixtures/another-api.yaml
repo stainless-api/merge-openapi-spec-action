@@ -1,0 +1,20 @@
+openapi: 3.0.0
+info:
+  title: Another API
+  version: 1.0.0
+servers:
+  - url: https://api.another.stainless.com
+    description: Another service
+paths:
+  /search:
+    get:
+      summary: Search in another service
+      responses:
+        '200':
+          description: Results from another service
+  /data:
+    get:
+      summary: Get data from another service
+      responses:
+        '200':
+          description: Data from another service

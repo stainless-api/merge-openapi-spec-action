@@ -1,0 +1,22 @@
+openapi: 3.0.0
+info:
+  title: Special API
+  version: 1.0.0
+servers:
+  - url: https://api.special.stainless.com
+    description: Special service endpoint
+  - url: https://api.special-staging.stainless.com
+    description: Special service staging
+paths:
+  /special/feature:
+    get:
+      summary: Get special feature
+      responses:
+        '200':
+          description: Success
+  /special/data:
+    post:
+      summary: Post special data
+      responses:
+        '201':
+          description: Created

@@ -2,6 +2,8 @@ openapi: 3.0.0
 info:
   title: Conflict Test 1
   version: 1.0.0
+servers:
+  - url: https://api.conflict1.com
 paths:
   /users:
     get:

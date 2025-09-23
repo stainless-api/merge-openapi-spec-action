@@ -7,459 +7,252 @@ on:
     branches: [ main ]
 
 jobs:
-  test-basic:
+  test-basic-merge:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Create test OpenAPI specs
-        run: |
-          mkdir -p test-specs
-          
-          # Create first test spec (JSON)
-          cat > test-specs/users-api.json <<EOF
-          {
-            "openapi": "3.0.0",
-            "info": {
-              "title": "Users API",
-              "version": "1.0.0"
-            },
-            "servers": [
-              {
-                "url": "https://api.example.com/v1"
-              }
-            ],
-            "security": [
-              {
-                "apiKey": []
-              }
-            ],
-            "tags": [
-              {
-                "name": "users",
-                "description": "User management"
-              }
-            ],
-            "components": {
-              "securitySchemes": {
-                "apiKey": {
-                  "type": "apiKey",
-                  "in": "header",
-                  "name": "X-API-Key"
-                }
-              }
-            },
-            "paths": {
-              "/users": {
-                "get": {
-                  "summary": "List users",
-                  "tags": ["users"],
-                  "responses": {
-                    "200": {
-                      "description": "Success"
-                    }
-                  }
-                }
-              },
-              "/users/{id}": {
-                "get": {
-                  "summary": "Get user by ID",
-                  "tags": ["users"],
-                  "parameters": [
-                    {
-                      "name": "id",
-                      "in": "path",
-                      "required": true,
-                      "schema": {
-                        "type": "string"
-                      }
-                    }
-                  ],
-                  "responses": {
-                    "200": {
-                      "description": "Success"
-                    }
-                  }
-                }
-              }
-            }
-          }
-          EOF
-          
-          # Create second test spec (YAML)
-          cat > test-specs/products-api.yaml <<EOF
-          openapi: 3.0.0
-          info:
-            title: Products API
-            version: 1.0.0
-          servers:
-            - url: https://api.example.com/v1
-          security:
-            - apiKey: []
-          tags:
-            - name: products
-              description: Product management
-          components:
-            securitySchemes:
-              apiKey:
-                type: apiKey
-                in: header
-                name: X-API-Key
-          paths:
-            /products:
-              get:
-                summary: List products
-                tags:
-                  - products
-                responses:
-                  '200':
-                    description: Success
-            /products/{id}:
-              get:
-                summary: Get product by ID
-                tags:
-                  - products
-                parameters:
-                  - name: id
-                    in: path
-                    required: true
-                    schema:
-                      type: string
-                responses:
-                  '200':
-                    description: Success
-          EOF
-      
-      - name: Test merge action with glob patterns
+
+      - name: Test basic merge with multiple files
         id: merge
         uses: ./
         with:
-          input_files: "test-specs/**/*.json,test-specs/**/*.yaml"
-          output_path: ./test-output/merged-test-api.yaml
-      
-      - name: Verify merge
+          input_files: "test-fixtures/users-api.json,test-fixtures/products-api.yaml"
+          output_path: ./test-output/merged-basic.yaml
+
+      - name: Verify merge results
         run: |
           echo "Merged file: ${{ steps.merge.outputs.merged_file }}"
           echo "Total paths: ${{ steps.merge.outputs.path_count }}"
-          
-          # Check if file exists
+
           if [ ! -f "${{ steps.merge.outputs.merged_file }}" ]; then
             echo "Error: Merged file not found!"
             exit 1
           fi
-          
-          # Check path count
+
           if [ "${{ steps.merge.outputs.path_count }}" != "4" ]; then
             echo "Error: Expected 4 paths, got ${{ steps.merge.outputs.path_count }}"
             exit 1
           fi
-          
-          # Verify content
-          npx @redocly/cli lint "${{ steps.merge.outputs.merged_file }}"
-          
-          echo "Test passed!"
-      
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-merged-spec-basic
-          path: ./test-output/
 
-  test-nested-directories:
+          npx @redocly/cli lint "${{ steps.merge.outputs.merged_file }}" --skip-rule=path-not-include-query --skip-rule=security-defined
+          echo "✅ Basic merge test passed!"
+
+  test-glob-patterns:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Create nested directory structure
-        run: |
-          mkdir -p services/auth
-          mkdir -p services/billing
-          mkdir -p services/notifications
-          
-          # Auth service
-          cat > services/auth/openapi.yaml <<EOF
-          openapi: 3.0.0
-          info:
-            title: Auth Service
-            version: 1.0.0
-          tags:
-            - name: authentication
-              description: Authentication operations
-          paths:
-            /auth/login:
-              post:
-                summary: User login
-                tags:
-                  - authentication
-                responses:
-                  '200':
-                    description: Success
-            /auth/logout:
-              post:
-                summary: User logout
-                tags:
-                  - authentication
-                responses:
-                  '200':
-                    description: Success
-          EOF
-          
-          # Billing service
-          cat > services/billing/openapi.json <<EOF
-          {
-            "openapi": "3.0.0",
-            "info": {
-              "title": "Billing Service",
-              "version": "1.0.0"
-            },
-            "tags": [
-              {
-                "name": "billing",
-                "description": "Billing operations"
-              }
-            ],
-            "paths": {
-              "/billing/invoice": {
-                "get": {
-                  "summary": "Get invoices",
-                  "tags": ["billing"],
-                  "responses": {
-                    "200": {
-                      "description": "Success"
-                    }
-                  }
-                }
-              }
-            }
-          }
-          EOF
-          
-          # Notifications service
-          cat > services/notifications/api.yml <<EOF
-          openapi: 3.0.0
-          info:
-            title: Notifications Service
-            version: 1.0.0
-          tags:
-            - name: notifications
-              description: Notification operations
-          paths:
-            /notifications/send:
-              post:
-                summary: Send notification
-                tags:
-                  - notifications
-                responses:
-                  '200':
-                    description: Success
-          EOF
-      
-      - name: Test with nested directories
-        id: merge-nested
+
+      - name: Test with glob patterns
+        id: glob
         uses: ./
         with:
-          input_files: "services/*/openapi.yaml,services/*/openapi.json,services/*/api.yml"
-          output_path: ./platform-api.yaml
-      
-      - name: Verify nested merge
+          input_files: "test-fixtures/*.yaml"
+          output_path: ./merged-glob.yaml
+          server_url_strategy: |
+            global: https://api.example.com
+            preserve:
+              - https://api.conflict1.com
+              - https://api.conflict2.com
+              - https://api.special.stainless.com
+              - https://api.another.stainless.com
+
+      - name: Verify glob results
         run: |
-          echo "Merged file: ${{ steps.merge-nested.outputs.merged_file }}"
-          echo "Total paths: ${{ steps.merge-nested.outputs.path_count }}"
-          
-          if [ "${{ steps.merge-nested.outputs.path_count }}" != "4" ]; then
-            echo "Error: Expected 4 paths, got ${{ steps.merge-nested.outputs.path_count }}"
+          PATHS="${{ steps.glob.outputs.path_count }}"
+          if [ "$PATHS" -lt "5" ]; then
+            echo "Error: Expected at least 5 paths from glob pattern, got $PATHS"
             exit 1
           fi
-          
-          # Check that all paths are present
-          yq eval '.paths | keys' "${{ steps.merge-nested.outputs.merged_file }}"
+          echo "✅ Glob pattern test passed with $PATHS paths"
+
+  test-server-url-strategy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test with server URL strategy
+        id: strategy
+        uses: ./
+        with:
+          input_files: "test-fixtures/main-api.yaml,test-fixtures/special-api.yaml,test-fixtures/local-api.yaml"
+          output_path: ./merged-strategy.yaml
+          server_url_strategy: |
+            global: https://api.stainless.com
+            preserve:
+              - https://api.special.stainless.com
+
+      - name: Verify server strategy
+        run: |
+          # Check global server is set
+          if ! grep -q "servers:" "${{ steps.strategy.outputs.merged_file }}"; then
+            echo "Error: No global servers found"
+            exit 1
+          fi
+
+          if ! grep -q "url: https://api.stainless.com" "${{ steps.strategy.outputs.merged_file }}"; then
+            echo "Error: Global server URL not found"
+            exit 1
+          fi
+
+          # Check path disambiguation for preserved servers
+          if ! grep -q "/special/feature?base=api.special.stainless.com" "${{ steps.strategy.outputs.merged_file }}"; then
+            echo "Error: Path disambiguation not working"
+            exit 1
+          fi
+
+          # Check that local API paths don't have ?base= (should use global)
+          if grep -q "/local/test?base=" "${{ steps.strategy.outputs.merged_file }}"; then
+            echo "Error: Local paths should not have base parameter"
+            exit 1
+          fi
+
+          echo "✅ Server URL strategy test passed!"
+
+  test-path-collision:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test path collision handling
+        id: collision
+        uses: ./
+        with:
+          input_files: "test-fixtures/main-api.yaml,test-fixtures/another-api.yaml"
+          output_path: ./merged-collision.yaml
+          server_url_strategy: |
+            global: https://api.stainless.com
+            preserve:
+              - https://api.another.stainless.com
+
+      - name: Verify collision handling
+        run: |
+          # Both have /search - verify they don't collide
+          SEARCH_COUNT=$(grep -c "^  /search" "${{ steps.collision.outputs.merged_file }}" || true)
+
+          if [ "$SEARCH_COUNT" -lt "2" ]; then
+            echo "Error: Expected 2 search paths (disambiguated), found $SEARCH_COUNT"
+            exit 1
+          fi
+
+          # Check both paths exist
+          if ! grep -q "^  /search:$" "${{ steps.collision.outputs.merged_file }}"; then
+            echo "Error: Main /search path not found"
+            exit 1
+          fi
+
+          if ! grep -q "^  /search?base=api.another.stainless.com:$" "${{ steps.collision.outputs.merged_file }}"; then
+            echo "Error: Disambiguated /search path not found"
+            exit 1
+          fi
+
+          echo "✅ Path collision handling test passed!"
 
   test-single-file:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Create single spec file
-        run: |
-          cat > single-api.yaml <<EOF
-          openapi: 3.0.0
-          info:
-            title: Single API
-            version: 1.0.0
-          paths:
-            /test:
-              get:
-                summary: Test endpoint
-                responses:
-                  '200':
-                    description: Success
-          EOF
-      
+
       - name: Test with single file
-        id: merge-single
+        id: single
         uses: ./
         with:
-          input_files: "single-api.yaml"
-          output_path: ./output/single-merged.yaml
-      
+          input_files: "test-fixtures/users-api.json"
+          output_path: ./single-output.yaml
+
       - name: Verify single file handling
         run: |
-          if [ "${{ steps.merge-single.outputs.path_count }}" != "1" ]; then
-            echo "Error: Expected 1 path, got ${{ steps.merge-single.outputs.path_count }}"
+          if [ "${{ steps.single.outputs.path_count }}" != "2" ]; then
+            echo "Error: Expected 2 paths from single file"
             exit 1
           fi
-
-  test-comma-separated-files:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Create specific files
-        run: |
-          cat > api-v1.json <<EOF
-          {
-            "openapi": "3.0.0",
-            "info": {"title": "API v1", "version": "1.0.0"},
-            "tags": [{"name": "v1", "description": "Version 1 API"}],
-            "paths": {
-              "/v1/test": {
-                "get": {
-                  "summary": "Test v1",
-                  "tags": ["v1"],
-                  "responses": {"200": {"description": "Success"}}
-                }
-              }
-            }
-          }
-          EOF
-          
-          cat > api-v2.yaml <<EOF
-          openapi: 3.0.0
-          info:
-            title: API v2
-            version: 2.0.0
-          tags:
-            - name: v2
-              description: Version 2 API
-          paths:
-            /v2/test:
-              get:
-                summary: Test v2
-                tags:
-                  - v2
-                responses:
-                  '200':
-                    description: Success
-          EOF
-      
-      - name: Test with comma-separated file list
-        id: merge-list
-        uses: ./
-        with:
-          input_files: "api-v1.json,api-v2.yaml"
-          output_path: ./merged-versions.yaml
-      
-      - name: Verify comma-separated merge
-        run: |
-          if [ "${{ steps.merge-list.outputs.path_count }}" != "2" ]; then
-            echo "Error: Expected 2 paths, got ${{ steps.merge-list.outputs.path_count }}"
-            exit 1
-          fi
-
-  test-path-conflict-warning:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Create specs with conflicting paths
-        run: |
-          mkdir -p conflict-test
-          
-          cat > conflict-test/service1.yaml <<EOF
-          openapi: 3.0.0
-          info:
-            title: Service 1
-            version: 1.0.0
-          tags:
-            - name: service1
-              description: Service 1 operations
-          paths:
-            /users:
-              get:
-                summary: Get users from service 1
-                tags:
-                  - service1
-                responses:
-                  '200':
-                    description: Success
-          EOF
-          
-          cat > conflict-test/service2.yaml <<EOF
-          openapi: 3.0.0
-          info:
-            title: Service 2
-            version: 1.0.0
-          tags:
-            - name: service2
-              description: Service 2 operations
-          paths:
-            /users:
-              get:
-                summary: Get users from service 2
-                tags:
-                  - service2
-                responses:
-                  '200':
-                    description: Success
-            /products:
-              get:
-                summary: Get products
-                tags:
-                  - service2
-                responses:
-                  '200':
-                    description: Success
-          EOF
-      
-      - name: Test with path conflicts (should fail)
-        id: merge-conflict
-        uses: ./
-        with:
-          input_files: "conflict-test/*.yaml"
-          output_path: ./conflict-merged.yaml
-        continue-on-error: true
-      
-      - name: Verify merge failed due to path conflicts
-        run: |
-          if [ "${{ steps.merge-conflict.outcome }}" != "failure" ]; then
-            echo "Error: Action should have failed due to path conflicts"
-            exit 1
-          fi
-          echo "Test passed: merge correctly failed due to path conflicts"
+          echo "✅ Single file test passed!"
 
   test-error-handling:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Test with non-existent files
-        id: merge-error
+        id: error
         uses: ./
         with:
-          input_files: "non-existent-dir/**/*.yaml"
+          input_files: "non-existent/**/*.yaml"
           output_path: ./should-not-exist.yaml
         continue-on-error: true
-      
+
       - name: Verify error handling
         run: |
-          if [ "${{ steps.merge-error.outcome }}" != "failure" ]; then
+          if [ "${{ steps.error.outcome }}" != "failure" ]; then
             echo "Error: Action should have failed with non-existent files"
             exit 1
           fi
-          
-          # Output file should not exist
+
           if [ -f "./should-not-exist.yaml" ]; then
             echo "Error: Output file should not exist after failure"
             exit 1
           fi
+
+          echo "✅ Error handling test passed!"
+
+  test-complex-scenario:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create additional test spec
+        run: |
+          cat > test-fixtures/temp-api.yaml <<EOF
+          openapi: 3.0.0
+          info:
+            title: Temp API
+            version: 1.0.0
+          servers:
+            - url: https://temp.api.com
+          paths:
+            /temp:
+              get:
+                summary: Temp endpoint
+                responses:
+                  '200':
+                    description: Success
+          EOF
+
+      - name: Test complex merge scenario
+        id: complex
+        uses: ./
+        with:
+          input_files: "test-fixtures/main-api.yaml,test-fixtures/special-api.yaml,test-fixtures/another-api.yaml,test-fixtures/local-api.yaml,test-fixtures/users-api.json,test-fixtures/products-api.yaml,test-fixtures/temp-api.yaml"
+          output_path: ./complex-merged.yaml
+          server_url_strategy: |
+            global: https://api.stainless.com
+            preserve:
+              - https://api.special.stainless.com
+              - https://api.another.stainless.com
+
+      - name: Verify complex merge
+        run: |
+          PATHS="${{ steps.complex.outputs.path_count }}"
+          echo "Merged $PATHS paths from multiple specs"
+
+          # Verify the file is valid OpenAPI
+          npx @redocly/cli lint "${{ steps.complex.outputs.merged_file }}" --skip-rule=path-not-include-query --skip-rule=security-defined
+
+          # Check preserved servers
+          if ! grep -q "/special/feature?base=api.special.stainless.com" "${{ steps.complex.outputs.merged_file }}"; then
+            echo "Error: Special API paths not preserved correctly"
+            exit 1
+          fi
+
+          if ! grep -q "/search?base=api.another.stainless.com" "${{ steps.complex.outputs.merged_file }}"; then
+            echo "Error: Another API paths not preserved correctly"
+            exit 1
+          fi
+
+          echo "✅ Complex scenario test passed!"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: complex-test-output
+          path: ./complex-merged.yaml

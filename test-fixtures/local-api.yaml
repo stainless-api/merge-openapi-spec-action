@@ -1,0 +1,22 @@
+openapi: 3.0.0
+info:
+  title: Local API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: http://localhost:8080
+    description: Alternative local server
+paths:
+  /local/test:
+    get:
+      summary: Local test endpoint
+      responses:
+        '200':
+          description: Success
+  /local/debug:
+    get:
+      summary: Debug endpoint
+      responses:
+        '200':
+          description: Debug info

@@ -1,0 +1,26 @@
+openapi: 3.0.0
+info:
+  title: Main API
+  version: 1.0.0
+servers:
+  - url: https://api.stainless.com
+    description: Production server
+paths:
+  /status:
+    get:
+      summary: Get API status
+      responses:
+        '200':
+          description: Success
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Healthy
+  /search:
+    get:
+      summary: Search in main API
+      responses:
+        '200':
+          description: Search results from main API
