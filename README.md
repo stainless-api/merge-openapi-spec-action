@@ -13,11 +13,11 @@ A GitHub Action to merge multiple OpenAPI specification files (JSON/YAML) into a
 
 ## Inputs
 
-| Input                | Description                                                                  | Required | Default                 |
-| -------------------- | ---------------------------------------------------------------------------- | -------- | ----------------------- |
-| `input_files`        | Glob patterns or file paths of OpenAPI spec files to merge (comma-separated) | Yes      | -                       |
-| `output_path`        | Path where the merged file will be saved                                     | No       | `./merged-openapi.yaml` |
-| `server_url_strategy`| YAML configuration for handling server URLs during merge (see below)         | No       | -                       |
+| Input                 | Description                                                                  | Required | Default                 |
+| --------------------- | ---------------------------------------------------------------------------- | -------- | ----------------------- |
+| `input_files`         | Glob patterns or file paths of OpenAPI spec files to merge (comma-separated) | Yes      | -                       |
+| `output_path`         | Path where the merged file will be saved                                     | No       | `./merged-openapi.yaml` |
+| `server_url_strategy` | YAML configuration for handling server URLs during merge (see below)         | No       | -                       |
 
 ## Outputs
 
@@ -42,7 +42,7 @@ A GitHub Action to merge multiple OpenAPI specification files (JSON/YAML) into a
 Control how different server URLs are handled during merge with the optional `server_url_strategy` input:
 
 ```yaml
-- uses: stainless-api/merge-openapi-specs-action@main
+- uses: stainless-api/merge-openapi-spec-action@main
   with:
     input_files: 'services/*/openapi.yaml'
     output_path: ./merged-api.yaml
@@ -78,80 +78,84 @@ This action will merge them all into a single file:
     output_path: ./merged-api.yaml
 ```
 
-### Integration with Stainless SDK Build Action
+### Integration with Stainless Spec Upload Action
+
+Combine this action with [stainless-api/upload-openapi-spec-action](https://github.com/stainless-api/upload-openapi-spec-action) to merge multiple specs and automatically build SDKs with preview and merge workflows:
 
 ```yaml
-name: Build SDK from Merged Specs
+name: Build SDKs from Merged Specs
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'api-specs/**'
-
-jobs:
-  merge-and-build-sdk:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Merge all OpenAPI specs
-        id: merge
-        uses: stainless-api/merge-openapi-spec-action@main
-        with:
-          input_files: 'api-specs/**/*.yaml,api-specs/**/*.json'
-          output_path: ./complete-api.yaml
-
-      - name: Build SDKs
-        uses: stainless-api/build-sdk-action@main
-        with:
-          stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
-          org: my-org
-          project: my-project
-          oas_path: ${{ steps.merge.outputs.merged_file }}
-          config_path: ./stainless.yaml
-```
-
-### Complete SDK Pipeline Example
-
-```yaml
-name: Build and Publish SDKs
-
-on:
-  push:
-    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
     paths:
       - 'services/*/openapi.yaml'
       - 'services/*/openapi.json'
 
+env:
+  STAINLESS_ORG: my-org
+  STAINLESS_PROJECT: my-project
+
 jobs:
-  build-sdks:
+  preview:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-      # Step 1: Merge all microservice API specs
-      - name: Merge microservice APIs
+      - name: Merge all microservice API specs
         id: merge-specs
         uses: stainless-api/merge-openapi-spec-action@main
         with:
-          input_files: 'services/*/openapi.yaml,services/*/openapi.json'
+          input_files: 'services/**/*.yaml,services/**/*.json'
           output_path: ./platform-api.yaml
 
-      # Step 2: Validate the merged spec
       - name: Validate OpenAPI spec
         run: |
           npx @redocly/cli lint ${{ steps.merge-specs.outputs.merged_file }}
 
-      # Step 3: Build SDKs with Stainless
-      - name: Run merge build
-        uses: stainless-api/build-sdk-action/merge@main
+      - name: Preview SDK changes
+        uses: stainless-api/upload-openapi-spec-action/preview@v1
         with:
           stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
           org: ${{ env.STAINLESS_ORG }}
           project: ${{ env.STAINLESS_PROJECT }}
-          oas_path: ${{ env.OAS_PATH }}
-          commit_message: ${{ env.COMMIT_MESSAGE }}
+          oas_path: ${{ steps.merge-specs.outputs.merged_file }}
+
+  merge:
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Merge all microservice API specs
+        id: merge-specs
+        uses: stainless-api/merge-openapi-spec-action@main
+        with:
+          input_files: 'services/**/*.yaml,services/**/*.json'
+          output_path: ./platform-api.yaml
+
+      - name: Validate OpenAPI spec
+        run: |
+          npx @redocly/cli lint ${{ steps.merge-specs.outputs.merged_file }}
+
+      - name: Merge SDK changes
+        uses: stainless-api/upload-openapi-spec-action/merge@v1
+        with:
+          stainless_api_key: ${{ secrets.STAINLESS_API_KEY }}
+          org: ${{ env.STAINLESS_ORG }}
+          project: ${{ env.STAINLESS_PROJECT }}
+          oas_path: ${{ steps.merge-specs.outputs.merged_file }}
 ```
 
 ## License
