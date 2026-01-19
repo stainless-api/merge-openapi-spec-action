@@ -1,3 +1,5 @@
+> Archived: use https://github.com/stainless-api/upload-openapi-spec-action/blob/main/prepare/combine/action.yml instead!
+
 # Merge OpenAPI Specs Action
 
 A GitHub Action to merge multiple OpenAPI specification files (JSON/YAML) into a single YAML file. Perfect for consolidating microservice APIs before uploading to [Stainless](https://stainless.com)!
